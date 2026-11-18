@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our Date Plan</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2b1d19">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,800&family=Caveat:wght@500;700&family=Nunito:wght@400;600&display=swap">
+<style>
+:root{--bg:#2b1d19;--card:#3a2823;--line:#5a4038;--tx:#fbeee6;--mu:#c9aea2;--blue:#86b6f0;--pink:#f6a9c4;color-scheme:dark;padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 Nunito,system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:22px 16px 110px}
+h1{font:800 32px/1.1 Fraunces,Georgia,serif;margin:0 0 6px;color:var(--pink)}
+h2{font:500 20px Fraunces,Georgia,serif;margin:0 0 10px}
+.mu{color:var(--mu);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0}
+label{display:block;font-size:14px;color:var(--mu);margin:12px 0 0}
+input,textarea{display:block;width:100%;margin-top:5px;padding:12px;font:inherit;font-size:16px;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:12px}
+textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:13px 16px;font-weight:600;color:var(--tx)}
+.go{background:var(--pink);color:#3b1727;width:100%;margin-top:16px}
+.bl{background:var(--blue);color:#10243d}.ghost{background:var(--line)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tones{display:flex;gap:8px;margin-top:12px}.tones button{flex:1;background:var(--line);padding:10px 4px}.tones .on{background:var(--blue);color:#10243d}
+.letter{font:700 22px/1.35 Caveat,cursive;min-height:300px;background:#fff3ee;color:#4a2d25;border-color:var(--pink)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:#231712;border-top:1px solid var(--line)}
+nav button{flex:1;background:none;color:var(--mu);padding:12px 4px;font-size:14px}nav .on{background:var(--card);color:var(--pink)}
+#toast{position:fixed;left:14px;right:14px;top:calc(14px + env(safe-area-inset-top,0px));background:var(--blue);color:#10243d;padding:14px;border-radius:14px;font-weight:600}[hidden]{display:none!important}
+.ok{text-align:center;padding:26px 16px}.ok b{font:800 26px Fraunces,Georgia,serif;color:var(--pink);display:block;margin-bottom:6px}
+</style>
+</head>
+<body>
+<main id="m"></main>
+<nav id="nv"></nav>
+<div id="toast" hidden role="alert"></div>
+<script>
+const EMAIL="alleraclint412@gmail.com",PIN="1234",ME="Clint";
+const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const F=[["name","Your name","text"],["place","Where are we going?","text"],["date","Date","date"],["time","What time?","time"],["eat","What do you want to eat?","text"],["after","What should we do after?","text"],["msg","A little message for me","textarea"]];
+const t12=t=>{if(!t)return"";const[h,m]=t.split(":").map(Number);return(h%12||12)+":"+String(m).padStart(2,"0")+(h<12?" AM":" PM")};
+const fd=d=>d?new Date(d+"T00:00").toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"}):"";
+let plan={},tab="plan",unlocked=false,sent=false,tone="soft",L={n:"",why:"",to:"",text:""};
+try{plan=JSON.parse(localStorage.getItem("dp"))||{}}catch(e){}
+try{const h=location.hash.match(/plan=(.+)$/);if(h){plan=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(h[1])))));tab="edit"}}catch(e){}
+const store=()=>{try{localStorage.setItem("dp",JSON.stringify(plan))}catch(e){}};
+const toast=m=>{const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,5000)};
+const fields=(p,x)=>F.map(([k,l,t])=>`<label>${l}${t==="textarea"?`<textarea id="${x}${k}">${esc(p[k])}</textarea>`:`<input id="${x}${k}" type="${t}" value="${esc(p[k])}">`}</label>`).join("");
+const read=x=>Object.fromEntries(F.map(([k])=>[k,$("#"+x+k).value.trim()]));
+const text=p=>`Date plan from ${p.name}\n\nWhere: ${p.place}\nWhen: ${fd(p.date)} at ${t12(p.time)}\nEat: ${p.eat}\nAfter: ${p.after}\n\nMessage: ${p.msg}`;
+const link=p=>location.origin+location.pathname+"#plan="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(p)))));
+async function share(t,subject,to){try{if(navigator.share){await navigator.share({title:subject,text:t});return}}catch(e){if(e.name==="AbortError")return}
+location.href="mailto:"+(to||"")+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(t)}
+const copy=async t=>{try{await navigator.clipboard.writeText(t);toast("Copied")}catch(e){toast("Press and hold the text to copy it")}};
+const lock=()=>`<h1>Moderator</h1><p class="mu">Enter the PIN to continue.</p><div class="card"><label>PIN<input id="pin" type="password" inputmode="numeric" autocomplete="off"></label><button class="go" data-a="unlock">Unlock</button></div>`;
+const V={
+plan(){if(sent)return`<div class="card ok"><b>Sent to ${ME}</b><p class="mu">Your date plan is on its way. Now we wait for the yes.</p><button class="bl" data-a="again">Plan another date</button></div>`;
+return`<h1>Let’s plan our date</h1><p class="mu">Fill this in and it goes straight to ${ME}.</p><div class="card">${fields(plan,"p")}<button class="go" data-a="send">Send to ${ME}</button></div>`},
+edit(){if(!unlocked)return lock();return`<h1>Edit the plan</h1><p class="mu">You can change anything she sent, then share the final plan with her.</p><div class="card">${fields(plan,"e")}<div class="row"><button class="ghost" data-a="save">Save</button><button class="bl" data-a="shareplan">Share with her</button></div><button class="ghost" style="width:100%;margin-top:10px" data-a="copyplan">Copy the plan</button></div>`},
+sorry(){if(!unlocked)return lock();return`<h1>Sorry letter</h1><p class="mu">Write it from the heart, then edit anything you like.</p><div class="card"><label>Her name<input id="ln" value="${esc(L.n)}"></label><label>What happened (optional, a few words)<input id="lw" value="${esc(L.why)}"></label><label>Her email (optional)<input id="lt" type="email" value="${esc(L.to)}"></label>
+<div class="tones">${[["soft","Soft"],["sincere","Sincere"],["funny","Funny"]].map(([k,l])=>`<button class="${k===tone?"on":""}" data-a="tone" data-i="${k}">${l}</button>`).join("")}</div>
+<label>Your letter<textarea id="lx" class="letter">${esc(L.text)}</textarea></label><div class="row"><button class="bl" data-a="shareletter">Send it</button><button class="ghost" data-a="copyletter">Copy</button></div></div>`}};
+function render(){$("#m").innerHTML=V[tab]();$("#nv").innerHTML=[["plan","Plan a date"],["edit","Edit plan"],["sorry","Sorry letter"]].map(([k,l])=>`<button class="${k===tab?"on":""}" data-a="go" data-i="${k}">${l}</button>`).join("")}
+function keepLetter(){if($("#ln")){L.n=$("#ln").value;L.why=$("#lw").value;L.to=$("#lt").value;L.text=$("#lx").value}}
+function letter(){const n=L.n||"my love",w=L.why?" ("+L.why+")":"";const T={
+soft:`Dear ${n},\n\nI’m sorry. I know I hurt you${w}, and that was never what I wanted. You matter so much to me, and I should have been more careful with your feelings.\n\nI’m listening, and I’ll do better. Please give me the chance to make it right.\n\nWith all my love,\n${ME}`,
+sincere:`My dearest ${n},\n\nI’ve been thinking about what happened${w}, and I owe you a real apology. I was wrong, and I’m sorry for how it made you feel. You deserve patience, honesty and kindness from me, and I didn’t give you that.\n\nI’m not asking you to forget it. I’m asking for a chance to show you I’ve learned. I’ll plan something nice for us whenever you’re ready.\n\nYours always,\n${ME}`,
+funny:`Dear ${n},\n\nBreaking news: I messed up${w}. The investigation is complete and I’m 100% at fault. I come with a sincere apology, a very sorry face, and a date of your choice.\n\nYou’re the best part of my day, and I never want to be the reason you’re upset. Forgive me?\n\nYour favorite person (on a good day),\n${ME}`};
+L.text=T[tone]}
+async function send(){const p=read("p");plan=p;store();if(!p.name||!p.place||!p.date||!p.time)return toast("Add your name, the place, the date and the time.");
+const body={_subject:"New date plan from "+p.name,_template:"table",_captcha:"false",Name:p.name,Where:p.place,Date:fd(p.date),Time:t12(p.time),Eat:p.eat,After:p.after,Message:p.msg,"Open to edit":link(p)};
+$(".go").textContent="Sending…";
+try{const r=await fetch("https://formsubmit.co/ajax/"+EMAIL,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok||j.success==="false")throw 0;sent=true;render()}
+catch(e){toast("Opening your email app instead…");setTimeout(()=>{location.href="mailto:"+EMAIL+"?subject="+encodeURIComponent("New date plan from "+p.name)+"&body="+encodeURIComponent(text(p)+"\n\nOpen to edit: "+link(p))},900);render()}}
+const H={go:i=>{keepLetter();tab=i;render()},again:()=>{sent=false;plan={};store();render()},send,
+unlock:()=>{if($("#pin").value===PIN){unlocked=true;if(tab==="sorry"&&!L.text)letter();render()}else toast("Wrong PIN")},
+save:()=>{plan=read("e");store();toast("Saved")},shareplan:()=>{plan=read("e");store();share(text(plan),"Our date plan")},copyplan:()=>{plan=read("e");store();copy(text(plan))},
+tone:i=>{keepLetter();tone=i;letter();render()},shareletter:()=>{keepLetter();share(L.text,"A letter for you",L.to)},copyletter:()=>{keepLetter();copy(L.text)}};
+document.addEventListener("click",e=>{const t=e.target.closest("[data-a]");if(!t)return;if(t.dataset.a==="go"&&t.dataset.i==="sorry"&&unlocked&&!L.text){tab="sorry";letter();render();return}H[t.dataset.a]?.(t.dataset.i)});
+render();
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
